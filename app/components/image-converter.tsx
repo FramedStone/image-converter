@@ -18,6 +18,24 @@ import {
   SelectValue,
 } from "../../components/ui/select";
 
+const imageFormats = [
+  "png",
+  "jpg",
+  "jpeg",
+  "webp",
+  "gif",
+  "tiff",
+  "bmp",
+  "ico",
+  "svg",
+  "avif",
+  "heic",
+  "jxr",
+  "psd",
+  "eps",
+  "raw",
+];
+
 export default function ImageConverter() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [convertTo, setConvertTo] = useState<string>("png");
@@ -92,10 +110,11 @@ export default function ImageConverter() {
                 <SelectValue placeholder="Select format" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="png">PNG</SelectItem>
-                <SelectItem value="jpg">JPG</SelectItem>
-                <SelectItem value="webp">WebP</SelectItem>
-                <SelectItem value="gif">GIF</SelectItem>
+                {imageFormats.map((format) => (
+                  <SelectItem key={format} value={format}>
+                    {format.toUpperCase()}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
