@@ -80,7 +80,7 @@ export default function ImageConverter() {
         if (!manualDownload) {
           const a = document.createElement("a");
           a.href = url;
-          a.download = `converted_${i + 1}.${convertTo}`;
+          a.download = `converted_${file.name}.${convertTo}`;
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
@@ -106,20 +106,12 @@ export default function ImageConverter() {
   const handleManualDownload = (url: string, index: number) => {
     const a = document.createElement("a");
     a.href = url;
-    a.download = `converted_${index + 1}.${convertTo}`;
+    a.download = `converted_${selectedFiles![index].name}.${convertTo}`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     setConvertedUrls((prev) => prev.filter((u) => u !== url));
-  };
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return "0 Bytes";
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
   return (
@@ -200,7 +192,7 @@ export default function ImageConverter() {
                 className="w-full flex justify-between items-center"
                 onClick={() => handleManualDownload(url, index)}
               >
-                <span>File {index + 1}</span>
+                <span>{selectedFiles![index].name}</span>
                 <Download className="h-4 w-4" />
               </Button>
             ))}
