@@ -1,8 +1,12 @@
-import React from 'react';
+import "./globals.css";
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 
-export const metadata = {
-  title: 'Image Converter',
-  description: 'Convert your images easily',
+const inter = Inter({ subsets: ["latin"] });
+
+export const metadata: Metadata = {
+  title: "Image Converter",
+  description: "Convert your images to different formats easily",
 };
 
 export default function RootLayout({
@@ -12,7 +16,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className={inter.className}>
+        <main className="min-h-screen bg-background">{children}</main>
+      </body>
     </html>
   );
 }
