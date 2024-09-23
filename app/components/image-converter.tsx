@@ -18,8 +18,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, Download } from "lucide-react";
+import { AlertCircle, Download, Archive } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import JSZip from "jszip";
 
 const imageFormats = ["png", "jpg", "jpeg", "webp", "tiff"];
 
@@ -132,6 +133,30 @@ export default function ImageConverter() {
     URL.revokeObjectURL(file.convertedUrl);
   };
 
+  const handleDownloadAll = async () => {
+    const zip = new JSZip();
+
+    for (const file of convertedFiles) {
+      const response = await fetch(file.convertedUrl);
+      const blob = await response.blob();
+      zip.file(`converted_${file.originalName}.${file.format}`, blob);
+    }
+
+    const content = await zip.generateAsync({ type: "blob" });
+    const url = URL.createObjectURL(content);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "converted_images.zip";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    // Clear the converted files list and revoke object URLs
+    convertedFiles.forEach((file) => URL.revokeObjectURL(file.convertedUrl));
+    setConvertedFiles([]);
+  };
+
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
@@ -216,6 +241,13 @@ export default function ImageConverter() {
                 <Download className="h-4 w-4" />
               </Button>
             ))}
+            <Button
+              onClick={handleDownloadAll}
+              className="w-full mt-4 flex items-center justify-center"
+            >
+              <Archive className="mr-2 h-4 w-4" />
+              Download All (ZIP)
+            </Button>
           </div>
         )}
       </CardFooter>
