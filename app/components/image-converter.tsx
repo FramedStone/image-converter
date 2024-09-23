@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -23,20 +23,32 @@ import { Switch } from "@/components/ui/switch";
 
 const imageFormats = ["png", "jpg", "jpeg", "webp", "tiff"];
 
+interface ConvertedFile {
+  originalName: string;
+  convertedUrl: string;
+  format: string;
+}
+
 export default function ImageConverter() {
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
   const [convertTo, setConvertTo] = useState<string>("png");
   const [converting, setConverting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [convertedUrls, setConvertedUrls] = useState<string[]>([]);
+  const [convertedFiles, setConvertedFiles] = useState<ConvertedFile[]>([]);
   const [manualDownload, setManualDownload] = useState(false);
+
+  useEffect(() => {
+    // Clean up object URLs when component unmounts
+    return () => {
+      convertedFiles.forEach((file) => URL.revokeObjectURL(file.convertedUrl));
+    };
+  }, []);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files && files.length > 0) {
       setSelectedFiles(files);
       setError(null);
-      setConvertedUrls([]);
     }
   };
 
@@ -52,10 +64,9 @@ export default function ImageConverter() {
 
     setConverting(true);
     setError(null);
-    setConvertedUrls([]);
 
     try {
-      const convertedUrls: string[] = [];
+      const newConvertedFiles: ConvertedFile[] = [];
 
       for (let i = 0; i < selectedFiles.length; i++) {
         const file = selectedFiles[i];
@@ -75,7 +86,11 @@ export default function ImageConverter() {
 
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
-        convertedUrls.push(url);
+        newConvertedFiles.push({
+          originalName: file.name,
+          convertedUrl: url,
+          format: convertTo,
+        });
 
         if (!manualDownload) {
           const a = document.createElement("a");
@@ -84,13 +99,12 @@ export default function ImageConverter() {
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
+          URL.revokeObjectURL(url);
         }
       }
 
       if (manualDownload) {
-        setConvertedUrls(convertedUrls);
-      } else {
-        convertedUrls.forEach((url) => URL.revokeObjectURL(url));
+        setConvertedFiles((prev) => [...prev, ...newConvertedFiles]);
       }
     } catch (err) {
       setError(
@@ -103,15 +117,19 @@ export default function ImageConverter() {
     }
   };
 
-  const handleManualDownload = (url: string, index: number) => {
+  const handleManualDownload = (file: ConvertedFile) => {
     const a = document.createElement("a");
-    a.href = url;
-    a.download = `converted_${selectedFiles![index].name}.${convertTo}`;
+    a.href = file.convertedUrl;
+    a.download = `converted_${file.originalName}.${file.format}`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    setConvertedUrls((prev) => prev.filter((u) => u !== url));
+
+    // Remove the file from the list after download
+    setConvertedFiles((prev) =>
+      prev.filter((f) => f.convertedUrl !== file.convertedUrl)
+    );
+    URL.revokeObjectURL(file.convertedUrl);
   };
 
   return (
@@ -182,17 +200,19 @@ export default function ImageConverter() {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-        {convertedUrls.length > 0 && (
+        {convertedFiles.length > 0 && (
           <div className="space-y-2">
             <h3 className="font-semibold">Converted Files:</h3>
-            {convertedUrls.map((url, index) => (
+            {convertedFiles.map((file) => (
               <Button
-                key={url}
+                key={file.convertedUrl}
                 variant="outline"
                 className="w-full flex justify-between items-center"
-                onClick={() => handleManualDownload(url, index)}
+                onClick={() => handleManualDownload(file)}
               >
-                <span>{selectedFiles![index].name}</span>
+                <span>
+                  {file.originalName} ({file.format})
+                </span>
                 <Download className="h-4 w-4" />
               </Button>
             ))}
