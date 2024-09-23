@@ -1,40 +1,26 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "../../components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardFooter,
   CardHeader,
   CardTitle,
-} from "../../components/ui/card";
-import { Label } from "../../components/ui/label";
+} from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../../components/ui/select";
+} from "@/components/ui/select";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
-const imageFormats = [
-  "png",
-  "jpg",
-  "jpeg",
-  "webp",
-  "gif",
-  "tiff",
-  "bmp",
-  "ico",
-  "svg",
-  "avif",
-  "heic",
-  "jxr",
-  "psd",
-  "eps",
-  "raw",
-];
+const imageFormats = ["png", "jpg", "jpeg", "webp", "tiff"];
 
 export default function ImageConverter() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -50,6 +36,10 @@ export default function ImageConverter() {
     }
   };
 
+  const handleFormatChange = (format: string) => {
+    setConvertTo(format);
+  };
+
   const handleConvert = async () => {
     if (!selectedFile) {
       setError("Please select a file to convert.");
@@ -60,12 +50,22 @@ export default function ImageConverter() {
     setError(null);
 
     try {
-      // In a real application, you would send the file to a server for conversion
-      // Here, we're simulating the conversion process
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      formData.append("format", convertTo);
 
-      // Create a fake converted file for download
-      const blob = new Blob([selectedFile], { type: `image/${convertTo}` });
+      const response = await fetch("/api/convert", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Conversion failed");
+      }
+
+      const blob = await response.blob();
+
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -75,14 +75,26 @@ export default function ImageConverter() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (err) {
-      setError("An error occurred during conversion. Please try again.");
+      setError(
+        `An error occurred during conversion: ${
+          err instanceof Error ? err.message : "Please try again."
+        }`
+      );
     } finally {
       setConverting(false);
     }
   };
 
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  };
+
   return (
-    <Card>
+    <Card className="w-full max-w-md mx-auto">
       <CardHeader>
         <CardTitle>Convert your image</CardTitle>
       </CardHeader>
@@ -102,10 +114,15 @@ export default function ImageConverter() {
                 file:bg-primary file:text-primary-foreground
                 hover:file:bg-primary/90"
             />
+            {selectedFile && (
+              <p className="mt-2 text-sm text-muted-foreground">
+                File size: {formatFileSize(selectedFile.size)}
+              </p>
+            )}
           </div>
           <div>
             <Label htmlFor="convert-to">Convert to</Label>
-            <Select onValueChange={setConvertTo} defaultValue={convertTo}>
+            <Select onValueChange={handleFormatChange} defaultValue={convertTo}>
               <SelectTrigger id="convert-to">
                 <SelectValue placeholder="Select format" />
               </SelectTrigger>
@@ -120,7 +137,7 @@ export default function ImageConverter() {
           </div>
         </div>
       </CardContent>
-      <CardFooter>
+      <CardFooter className="flex flex-col items-stretch gap-4">
         <Button
           onClick={handleConvert}
           disabled={!selectedFile || converting}
@@ -128,8 +145,14 @@ export default function ImageConverter() {
         >
           {converting ? "Converting..." : "Convert"}
         </Button>
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
       </CardFooter>
-      {error && <div className="px-6 pb-4 text-red-500 text-sm">{error}</div>}
     </Card>
   );
 }
